@@ -1,4 +1,5 @@
 import random
+import psutil
 from typing import Tuple
 
 # Voce pode criar funcoes auxiliares neste arquivo
@@ -23,4 +24,28 @@ def make_move(state) -> Tuple[int, int]:
 
     return (-1, -1)
 
+def monte_carlo_tree_search():
+    return 0
 
+def selection():
+    return 0
+
+def ucb():
+    return 0
+
+def expansion():
+    return 0
+
+def rollout():
+    return 0
+
+def backpropagation():
+    return 0
+
+def resources_left(time:float):
+    memory = psutil.virtual_memory()
+    ram_used = memory[3]/1000000000
+    if(ram_used > 3.50 and time > 4.80):
+        return False
+    
+    return True

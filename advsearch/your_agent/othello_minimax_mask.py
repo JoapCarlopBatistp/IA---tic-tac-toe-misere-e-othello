@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from typing import Tuple
 from ..othello.gamestate import GameState
 from ..othello.board import Board
@@ -50,5 +51,25 @@ def evaluate_mask(state, player:str) -> float:
     :param player: player to evaluate the state for (B or W)
     """
     # substitua pelo seu codigo
+    board = state.get_board()
+    tabuleiro = board.__str__()
+    white = 0
+    black = 0
+    i = 0
+    for row in EVAL_TEMPLATE:
+        for element in row:
+            match (tabuleiro[i]):
+                case 'B':
+                    black += element
+                case 'W':
+                    white += element
+            i += 1
+            while((tabuleiro[i] == chr(10)) and i < 70):
+                i += 1
+                
+    if(player == 'W'):
+        value = white - black
+    if(player == 'B'):
+        value = black - white
     
-    return 0
+    return value
