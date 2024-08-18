@@ -5,7 +5,9 @@ from operator import itemgetter, xor
 
 
 winCutoff = 5000
-
+UPPERBOUND = 1
+LOWERBOUND = -1
+EXACT_MATCH = 0
 
 EVAL_TEMPLATE = [
     [100, -30, 6, 2, 2, 6, -30, 100],
@@ -29,10 +31,11 @@ def make_move(state) -> Tuple[int, int]:
     """
     global max_score
     global player_ai
+    global tts
     tts = hashtable()
     max_score = float('-inf')
     player_ai = state.player
-    timelimit = 4.8
+    timelimit = 4.5
     result = iterative_deepening_search(state, timelimit)
     
     if(result[0] >= winCutoff):
@@ -83,6 +86,21 @@ def minimax_move(state, max_depth:int, eval_func:Callable, end_time) -> Tuple[in
 
 def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end_time,alpha=float('-inf'), beta=float('inf')):
     
+    hash_move = None
+    hash_entry = tts.get(state)
+    if hash_entry:
+        hash_depth, hash_move, hash_alpha, hash_beta, hash_type = hash_entry
+        if(hash_depth >= max_depth):
+            if(hash_type == EXACT_MATCH):
+                return hash_alpha, hash_move
+            if(hash_type == LOWERBOUND):
+                alpha = max(alpha, hash_alpha)
+            if(hash_type == UPPERBOUND):
+                beta = min(beta, hash_alpha)
+            
+            if(alpha >= beta):
+                return hash_alpha, hash_move
+    
     if(max_depth == 0) or (state.is_terminal() or time.time() >= end_time):
         return eval_func(state), None
     
@@ -99,6 +117,8 @@ def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end
             if value >= beta:
                 break
             alpha = max(alpha, value)
+            
+                
     else:
         value = float('inf')
         for move in state.legal_moves():
@@ -111,6 +131,17 @@ def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end
             if value <= alpha:
                 break
             beta = min(beta, value)
+    
+    if(value <= alpha):
+            hash_type = UPPERBOUND
+    elif(value >= beta):
+            hash_type = LOWERBOUND
+    else:
+            hash_type = EXACT_MATCH
+            
+    
+    hash_depth = max_depth        
+    tts.add_in_hash(state, hash_depth, best_move, alpha, beta, hash_type)
             
     return value, best_move
 
@@ -131,14 +162,56 @@ def eval_func(state):
     board = state.get_board()
     white = board.num_pieces('W')
     black = board.num_pieces('B')
+    
+    w1 = 0.2
+    pieces_cardinality = 0
+    w2 = 0.8
+    board_mask_value = 0
+    w3 = 3
+    stability = 0
+    w4 = 0.2
+    mobility = 0
+    
+    
+    #diferença de peças
+    if(player_ai == 'W'):
+        pieces_cardinality = white - black
+    if(player_ai == 'B'):
+        pieces_cardinality = black - white
+    
+    #máscara
+    size_board = len(board.tiles)
+    
+    for row in range(size_board):
+        for collumn in range(size_board):
+            if (board.tiles[row][collumn] == player_ai):
+                board_mask_value += EVAL_TEMPLATE[row][collumn]
+                stability += stability_calculation(row, collumn, size_board)
+            elif (board.tiles[row][collumn] == board.opponent(player_ai)):
+                board_mask_value -= EVAL_TEMPLATE[row][collumn]
+                stability -= stability_calculation(row, collumn, size_board)
+                
+    #mobilidade
+    white = len(board.legal_moves('W'))
+    black = len(board.legal_moves('B'))
         
     if(player_ai == 'W'):
-        value = white - black
+        mobility += white - black
     if(player_ai == 'B'):
-        value = black - white
-         
-    return value   
+        mobility += black - white
+        
+    return (w1*pieces_cardinality + w2*board_mask_value + w3*stability + w4*mobility)
 
+def stability_calculation(row, collumn, size_board):
+    value = 0
+    if row == 0 or row == size_board - 1 or collumn == 0 or collumn == size_board - 1:
+        value += 1
+
+        # Adicionar valor às peças estáveis nas diagonais
+    if (row == 0 and collumn == 0) or (row == 0 and collumn == size_board - 1) or (row == size_board - 1 and collumn == 0) or (row == size_board - 1 and collumn == size_board - 1):
+        value += 2
+        
+    return value
 def initialize_zobrist_hash_Table():
     zTable = [[[None] * 2 for _ in range(8)] for _ in range(8)]
     currNumber = 0
@@ -161,6 +234,7 @@ class hashtable():
         board = state.get_board()
         tabuleiro = board.__str__()
         h = 0
+        i = 0
         for row in self.ztable:
             for element in row:
                 match (tabuleiro[i]):
@@ -174,8 +248,9 @@ class hashtable():
     
         return h
     
-    def add_in_hash(self, state, values):
+    def add_in_hash(self, state, hash_depth, hash_move, hash_alpha, hash_beta,hash_type):
         h = self.get_hash(state)
+        values = [hash_depth, hash_move, hash_alpha,hash_beta,hash_type]
         self.arr[h] = values
     
     def get(self, state):

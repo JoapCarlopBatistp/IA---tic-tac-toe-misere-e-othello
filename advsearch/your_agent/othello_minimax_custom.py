@@ -40,8 +40,8 @@ def evaluate_custom(state, player:str) -> float:
     black = len(board.legal_moves('B'))
         
     if(player == 'W'):
-        value = white - black
+        value += white - black
     if(player == 'B'):
-        value = black - white
+        value += black - white
          
     return value  

@@ -1,12 +1,8 @@
 import random
 from typing import Tuple
-#NÃO COMPLETAMENTE IMPLEMENTADO!!!!
+#NÃO COMPLETAMENTE IMPLEMENTADO!!!!!!!
+#ORDENAMENTO DOS NODOS AINDA NÃO FUNCIONA 100%
 
-# Voce pode criar funcoes auxiliares neste arquivo
-# e tambem modulos auxiliares neste pacote.
-#
-# Nao esqueca de renomear 'your_agent' com o nome
-# do seu agente.
 EVAL_TEMPLATE = [
     [100, -30, 6, 2, 2, 6, -30, 100],
     [-30, -50, 1, 1, 1, 1, -50, -30],
@@ -91,7 +87,7 @@ def is_killer_move(max_depth:int,move:Tuple[int, int]):
     else:
         return False
     
-
+#IGNORAR PROXIMAS DUAS FUNCOES
 def create_refutation_table(killer_moves_stored: int):
     refutation_table = [[0 for i in range(2)] for j in range(killer_moves_stored)]
     return refutation_table
