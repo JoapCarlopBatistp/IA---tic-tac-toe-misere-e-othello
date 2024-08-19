@@ -162,7 +162,18 @@ def eval_func(state):
     board = state.get_board()
     white = board.num_pieces('W')
     black = board.num_pieces('B')
-    
+    if(state.is_terminal()):
+        if(player_ai == 'W'):
+            if(state.winner() == 'B'):
+                return -10000
+            else:
+                return 10000
+        if(player_ai == 'B'):
+            if(state.winner() == 'W'):
+                return -10000
+            else:
+                return 10000
+            
     w1 = 0.2
     pieces_cardinality = 0
     w2 = 0.8

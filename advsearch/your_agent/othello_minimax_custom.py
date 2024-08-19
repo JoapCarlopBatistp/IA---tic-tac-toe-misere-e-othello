@@ -9,6 +9,16 @@ from .minimax import minimax_move
 #
 # Nao esqueca de renomear 'your_agent' com o nome
 # do seu agente.
+EVAL_TEMPLATE = [
+    [100, -30, 6, 2, 2, 6, -30, 100],
+    [-30, -50, 1, 1, 1, 1, -50, -30],
+    [  6,   1, 1, 1, 1, 1,   1,   6],
+    [  2,   1, 1, 3, 3, 1,   1,   2],
+    [  2,   1, 1, 3, 3, 1,   1,   2],
+    [  6,   1, 1, 1, 1, 1,   1,   6],
+    [-30, -50, 1, 1, 1, 1, -50, -30],
+    [100, -30, 6, 2, 2, 6, -30, 100]
+]
 
 
 def make_move(state) -> Tuple[int, int]:
@@ -35,13 +45,67 @@ def evaluate_custom(state, player:str) -> float:
     :param player: player to evaluate the state for (B or W)
     """
     # substitua pelo seu codigo                      #mobility heuristic - nro de jogadas possiveis
-    board = state.get_board()                  
+    board = state.get_board()
+    white = board.num_pieces('W')
+    black = board.num_pieces('B')
+    if(state.is_terminal()):
+        if(player == 'W'):
+            if(state.winner() == 'B'):
+                return -10000
+            else:
+                return 10000
+        if(player == 'B'):
+            if(state.winner() == 'W'):
+                return -10000
+            else:
+                return 10000
+            
+    w1 = 0.2
+    pieces_cardinality = 0
+    w2 = 0.8
+    board_mask_value = 0
+    w3 = 3
+    stability = 0
+    w4 = 0.2
+    mobility = 0
+    
+    
+    #diferença de peças
+    if(player == 'W'):
+        pieces_cardinality = white - black
+    if(player == 'B'):
+        pieces_cardinality = black - white
+    
+    #máscara
+    size_board = len(board.tiles)
+    
+    for row in range(size_board):
+        for collumn in range(size_board):
+            if (board.tiles[row][collumn] == player):
+                board_mask_value += EVAL_TEMPLATE[row][collumn]
+                stability += stability_calculation(row, collumn, size_board)
+            elif (board.tiles[row][collumn] == board.opponent(player)):
+                board_mask_value -= EVAL_TEMPLATE[row][collumn]
+                stability -= stability_calculation(row, collumn, size_board)
+                
+    #mobilidade
     white = len(board.legal_moves('W'))
     black = len(board.legal_moves('B'))
         
     if(player == 'W'):
-        value += white - black
+        mobility += white - black
     if(player == 'B'):
-        value += black - white
-         
-    return value  
+        mobility += black - white
+        
+    return (w1*pieces_cardinality + w2*board_mask_value + w3*stability + w4*mobility)
+
+def stability_calculation(row, collumn, size_board):
+    value = 0
+    if row == 0 or row == size_board - 1 or collumn == 0 or collumn == size_board - 1:
+        value += 1
+
+        # Adicionar valor às peças estáveis nas diagonais
+    if (row == 0 and collumn == 0) or (row == 0 and collumn == size_board - 1) or (row == size_board - 1 and collumn == 0) or (row == size_board - 1 and collumn == size_board - 1):
+        value += 2
+        
+    return value
