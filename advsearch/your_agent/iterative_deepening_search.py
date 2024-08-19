@@ -106,8 +106,10 @@ def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end
     
     if isMax:
         value = float('-inf')
-        for move in state.legal_moves():
-
+        possible_moves = order_possible_moves(state, max_depth)#move ordering here
+        possible_moves.sort(reverse=True)
+        
+        for value_order, move in possible_moves:
             next_node = state.next_state(move)
 
             temp = minimax_alpha_beta(next_node, max_depth - 1, not isMax, eval_func, end_time, alpha, beta)[0]
@@ -121,7 +123,10 @@ def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end
                 
     else:
         value = float('inf')
-        for move in state.legal_moves():
+        possible_moves = order_possible_moves(state, max_depth)#move ordering here
+        possible_moves.sort(reverse=True)
+
+        for value_order, move in possible_moves:
             next_node = state.next_state(move)
             
             temp = minimax_alpha_beta(next_node, max_depth - 1, not isMax, eval_func, end_time, alpha, beta)[0]
@@ -130,6 +135,7 @@ def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end
                 best_move = move
             if value <= alpha:
                 break
+            
             beta = min(beta, value)
     
     if(value <= alpha):
@@ -145,11 +151,23 @@ def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end
             
     return value, best_move
 
-def getBonus(state):
+def order_possible_moves(state, depth):
+    moves = state.legal_moves()
+    arr = [[0]]*len(moves)
+    j = 0
+    for i in moves:
+        child = state.next_state(i)
+        value = getBonus(child, i, depth)
+        arr[j] = (value, i)
+        j += 1
+
+    return arr
+
+def getBonus(state, move, depth):
     board = state.get_board()                  
     white = len(board.legal_moves('W'))
     black = len(board.legal_moves('B'))
-        
+    
     if(player_ai == 'W'):
         value = white - black
     if(player_ai == 'B'):
