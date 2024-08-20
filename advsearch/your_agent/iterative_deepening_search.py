@@ -1,13 +1,7 @@
 import time
 from typing import Tuple
 from typing import Tuple, Callable
-from operator import itemgetter, xor
-
-
-winCutoff = 5000
-UPPERBOUND = 1
-LOWERBOUND = -1
-EXACT_MATCH = 0
+from .minimax import minimax_move
 
 EVAL_TEMPLATE = [
     [100, -30, 6, 2, 2, 6, -30, 100],
@@ -19,6 +13,7 @@ EVAL_TEMPLATE = [
     [-30, -50, 1, 1, 1, 1, -50, -30],
     [100, -30, 6, 2, 2, 6, -30, 100]
 ]
+winCutoff = 1000
 
 def make_move(state) -> Tuple[int, int]:
     """
@@ -31,8 +26,6 @@ def make_move(state) -> Tuple[int, int]:
     """
     global max_score
     global player_ai
-    global tts
-    tts = hashtable()
     max_score = float('-inf')
     player_ai = state.player
     timelimit = 4.5
@@ -57,12 +50,13 @@ def iterative_deepening_search(state, timelimit:float):
         if(time.time() >= end_time):
             break
         
-        search_result = minimax_move(state, depth, eval_func, end_time)
+        search_result = minimax_move(state, depth, evaluate_custom, end_time)
 
         if(score >= winCutoff):
             return search_result
         
         if(not search_cutoff):
+            print(search_result[0])
             score = search_result[0]
             move = search_result[1]
         
@@ -70,113 +64,15 @@ def iterative_deepening_search(state, timelimit:float):
         
     return score, move
 
-
-def minimax_move(state, max_depth:int, eval_func:Callable, end_time) -> Tuple[int, int]:
+def evaluate_custom(state) -> float:
     """
-    Returns a move computed by the minimax algorithm with alpha-beta pruning for the given game state.
-    :param state: state to make the move (instance of GameState)
-    :param max_depth: maximum depth of search (-1 = unlimited)
-    :param eval_func: the function to evaluate a terminal or leaf state (when search is interrupted at max_depth)
-                    This function should take a GameState object and a string identifying the player,
-                    and should return a float value representing the utility of the state for the player.
-    :return: (int, int) tuple with x, y coordinates of the move (remember: 0 is the first row/column)
+    Evaluates an othello state from the point of view of the given player. 
+    If the state is terminal, returns its utility. 
+    If non-terminal, returns an estimate of its value based on your custom heuristic
+    :param state: state to evaluate (instance of GameState)
+    :param player: player to evaluate the state for (B or W)
     """
-    result = minimax_alpha_beta(state, max_depth, True, eval_func, end_time)
-    return result
-
-def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end_time,alpha=float('-inf'), beta=float('inf')):
-    
-    hash_move = None
-    hash_entry = tts.get(state)
-    if hash_entry:
-        hash_depth, hash_move, hash_alpha, hash_beta, hash_type = hash_entry
-        if(hash_depth >= max_depth):
-            if(hash_type == EXACT_MATCH):
-                return hash_alpha, hash_move
-            if(hash_type == LOWERBOUND):
-                alpha = max(alpha, hash_alpha)
-            if(hash_type == UPPERBOUND):
-                beta = min(beta, hash_alpha)
-            
-            if(alpha >= beta):
-                return hash_alpha, hash_move
-    
-    if(max_depth == 0) or (state.is_terminal() or time.time() >= end_time):
-        return eval_func(state), None
-    
-    if isMax:
-        value = float('-inf')
-        possible_moves = order_possible_moves(state, max_depth)#move ordering here
-        possible_moves.sort(reverse=True)
-        
-        for value_order, move in possible_moves:
-            next_node = state.next_state(move)
-
-            temp = minimax_alpha_beta(next_node, max_depth - 1, not isMax, eval_func, end_time, alpha, beta)[0]
-            if temp > value:
-                value = temp
-                best_move = move
-            if value >= beta:
-                break
-            alpha = max(alpha, value)
-            
-                
-    else:
-        value = float('inf')
-        possible_moves = order_possible_moves(state, max_depth)#move ordering here
-        possible_moves.sort(reverse=True)
-
-        for value_order, move in possible_moves:
-            next_node = state.next_state(move)
-            
-            temp = minimax_alpha_beta(next_node, max_depth - 1, not isMax, eval_func, end_time, alpha, beta)[0]
-            if temp < value:
-                value = temp
-                best_move = move
-            if value <= alpha:
-                break
-            
-            beta = min(beta, value)
-    
-    if(value <= alpha):
-            hash_type = UPPERBOUND
-    elif(value >= beta):
-            hash_type = LOWERBOUND
-    else:
-            hash_type = EXACT_MATCH
-            
-    
-    hash_depth = max_depth        
-    tts.add_in_hash(state, hash_depth, best_move, alpha, beta, hash_type)
-            
-    return value, best_move
-
-def order_possible_moves(state, depth):
-    moves = state.legal_moves()
-    arr = [[0]]*len(moves)
-    j = 0
-    for i in moves:
-        child = state.next_state(i)
-        value = getBonus(child, i, depth)
-        arr[j] = (value, i)
-        j += 1
-
-    return arr
-
-def getBonus(state, move, depth):
-    board = state.get_board()                  
-    white = len(board.legal_moves('W'))
-    black = len(board.legal_moves('B'))
-    
-    if(player_ai == 'W'):
-        value = white - black
-    if(player_ai == 'B'):
-        value = black - white
-         
-    return value  
-
-
-def eval_func(state):
+    # substitua pelo seu codigo                      #mobility heuristic - nro de jogadas possiveis
     board = state.get_board()
     white = board.num_pieces('W')
     black = board.num_pieces('B')
@@ -241,49 +137,54 @@ def stability_calculation(row, collumn, size_board):
         value += 2
         
     return value
-def initialize_zobrist_hash_Table():
-    zTable = [[[None] * 2 for _ in range(8)] for _ in range(8)]
-    currNumber = 0
 
-    for row in range(8):
-        for col in range(8):
-            for i in range(2):
-                zTable[row][col][i] = currNumber
-                currNumber += 1
+def minimax_move(state, max_depth:int, eval_func:Callable, end_time) -> Tuple[int, int]:
+    """
+    Returns a move computed by the minimax algorithm with alpha-beta pruning for the given game state.
+    :param state: state to make the move (instance of GameState)
+    :param max_depth: maximum depth of search (-1 = unlimited)
+    :param eval_func: the function to evaluate a terminal or leaf state (when search is interrupted at max_depth)
+                    This function should take a GameState object and a string identifying the player,
+                    and should return a float value representing the utility of the state for the player.
+    :return: (int, int) tuple with x, y coordinates of the move (remember: 0 is the first row/column)
+    """
+    result = minimax_alpha_beta(state, max_depth, True, evaluate_custom, end_time)
+    return result
 
-    return zTable
+def minimax_alpha_beta(state, max_depth:int, isMax:bool, eval_func:callable, end_time,alpha=float('-inf'), beta=float('inf')):
+    
+    
+    if(max_depth == 0) or (state.is_terminal() or time.time() >= end_time):
+        return eval_func(state), None
+    
+    if isMax:
+        value = float('-inf')
+    
+        for move in state.legal_moves():
+            next_node = state.next_state(move)
 
-class hashtable():
-    def __init__(self):
-        self.max = 10000000
-        self.arr = [None for i in range(self.max)]
-        self.ztable = initialize_zobrist_hash_Table()
+            temp = minimax_alpha_beta(next_node, max_depth - 1, not isMax, eval_func, end_time, alpha, beta)[0]
+            if temp > value:
+                value = temp
+                best_move = move
+            if value >= beta:
+                break
+            alpha = max(alpha, value)
+            
+                
+    else:
+        value = float('inf')
 
-    def get_hash(self, state):
-        board = state.get_board()
-        tabuleiro = board.__str__()
-        h = 0
-        i = 0
-        for row in self.ztable:
-            for element in row:
-                match (tabuleiro[i]):
-                    case 'B':
-                        h = xor(h, element[0])
-                    case 'W':
-                        h = xor(h, element[1])
-                i += 1
-                while((tabuleiro[i] == chr(10)) and i < 70):
-                    i += 1
-    
-        return h
-    
-    def add_in_hash(self, state, hash_depth, hash_move, hash_alpha, hash_beta,hash_type):
-        h = self.get_hash(state)
-        values = [hash_depth, hash_move, hash_alpha,hash_beta,hash_type]
-        self.arr[h] = values
-    
-    def get(self, state):
-        h = self.get_hash(state)
-        resultado = self.arr[h]
-        return resultado
-    
+        for move in state.legal_moves():
+            next_node = state.next_state(move)
+            
+            temp = minimax_alpha_beta(next_node, max_depth - 1, not isMax, eval_func, end_time, alpha, beta)[0]
+            if temp < value:
+                value = temp
+                best_move = move
+            if value <= alpha:
+                break
+            
+            beta = min(beta, value)
+            
+    return value, best_move

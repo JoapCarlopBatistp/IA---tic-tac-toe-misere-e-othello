@@ -2,7 +2,7 @@ import random
 from typing import Tuple
 
 from advsearch.your_agent import mcts
-from advsearch.your_agent import iterative_deepening_search
+from advsearch.your_agent import iterative_deepening_search_w_hash
 from advsearch.your_agent import othello_minimax_custom
 from ..othello.gamestate import GameState
 from ..othello.board import Board
