@@ -2,6 +2,7 @@ import time
 from typing import Tuple
 from typing import Tuple, Callable
 from .minimax import minimax_move
+from .othello_minimax_custom import make_move
 
 EVAL_TEMPLATE = [
     [100, -30, 6, 2, 2, 6, -30, 100],

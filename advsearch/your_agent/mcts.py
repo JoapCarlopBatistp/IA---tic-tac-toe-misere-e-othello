@@ -1,6 +1,9 @@
+from cmath import atan
+from math import ceil
 import random
 import time
 from typing import Tuple
+from .othello_minimax_custom import make_move
 
 
 # Voce pode criar funcoes auxiliares neste arquivo
@@ -19,7 +22,7 @@ def heuristic_function(state):
         value = black - white
     return value
 
-def make_move(state, max_depth:int = 5, eval_func:callable = heuristic_function, time_limit:float = 4.8) -> Tuple[int, int]:
+def make_move(state, max_depth:int = 15, eval_func:callable = heuristic_function, time_limit:float = 4.0) -> Tuple[int, int]:
     """
     Returns a move for the given game state. 
     The game is not specified, but this is MCTS and should handle any game, since
@@ -30,8 +33,20 @@ def make_move(state, max_depth:int = 5, eval_func:callable = heuristic_function,
     """
     global player_ai
     player_ai = state.player
-    move = monte_carlo(state, max_depth, time_limit, eval_func)
-    return move
+    Board = state.get_board()
+    time_limit = 4.0
+    available_moves = state.legal_moves()
+    max_moves = len(list(available_moves))
+    if max_moves == 1:
+        return list(available_moves)[0]
+    elif max_moves < 1:
+        return (-1, -1)
+    max_depth = ceil(50 * 2.72 ** (-1.00 * max_moves))
+    if(Board.num_pieces('W') + Board.num_pieces('B') < 58):
+        return monte_carlo(state, max_depth, time_limit, eval_func)
+    else:
+        return make_move(state)
+    
 
 def has_time(time_limit, start_time):
     if (start_time + time_limit) < time.time():
@@ -42,7 +57,7 @@ def monte_carlo(state, max_depth, time_limit, eval_func):
     start_time = time.time()
     depth = 0
     legal_moves = state.legal_moves()
-    prince_of_monaco = (-1, -1)
+    prince_of_monaco = list(legal_moves)[0]
     max_reward = float('-inf')
     i = 0
     while has_time(time_limit, start_time) and i < len(list(legal_moves)):
